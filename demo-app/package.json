@@ -1,0 +1,18 @@
+{
+  "name": "gitops-demo-app",
+  "version": "1.0.0",
+  "description": "Simple Node.js app for GitOps demonstration",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node src/app.js",
+    "build": "echo 'No build step required for this demo'",
+    "test": "echo 'No tests configured yet'"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["gitops", "kubernetes", "flux", "demo"],
+  "author": "GitOps Demo",
+  "license": "MIT"
+}
