@@ -25,7 +25,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: demo-app
-        image: ghcr.io/idvoretskyi/gitops-demo/demo-app:main-7227cddf45691a348611a8bd932e160ea27bfc64
+        image: ghcr.io/idvoretskyi/gitops-demo/demo-app:main-806667b0d8c8b236ba5a08f7667c0d8407794595
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
