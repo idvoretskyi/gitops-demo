@@ -96,9 +96,12 @@ kubectl apply --dry-run=client -k apps/demo-app/
 ## Key Files
 
 - `demo-app/src/app.js` - Main application entry point
-- `apps/demo-app/deployment.yaml` - Kubernetes deployment manifest
+- `apps/demo-app/deployment.yaml` - Local development deployment (tag-based)
+- `apps/demo-app/deployment-production.yaml` - Production deployment (digest-based)
 - `flux-system/gotk-components.yaml` - Flux system configuration
 - `.github/workflows/build-and-deploy.yml` - CI/CD pipeline with security scanning
 - `.github/workflows/codeql.yml` - CodeQL security analysis
 - `.github/workflows/security.yml` - Comprehensive security scanning
 - `.github/dependabot.yml` - Automated dependency updates
+- `SECURITY.md` - Comprehensive security implementation guide
+- `IMAGE-DIGEST-SOLUTION.md` - Image digest compliance solution
