@@ -77,11 +77,12 @@ kubectl apply --dry-run=client -k apps/demo-app/
 - Health checks built into Docker image
 
 **Kubernetes Security**:
-- SecurityContext with runAsNonRoot and specific UID/GID
+- SecurityContext with runAsNonRoot and high UID/GID (30000)
 - No service account token mounting
 - NetworkPolicy for traffic isolation
 - Resource limits and requests defined
-- Specific image tags (no 'latest')
+- Specific image tags with imagePullPolicy: Always
+- Image digests in CI/CD for immutable deployments
 
 **Infrastructure Security**:
 - Kubesec for Kubernetes manifest security analysis

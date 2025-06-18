@@ -6,7 +6,9 @@ RUN apk add --no-cache curl
 # Create app directory with proper permissions
 WORKDIR /app
 
-# Use existing node user (UID 1000)
+# Create high UID user for security
+RUN addgroup -g 30000 appgroup && \
+    adduser -u 30000 -G appgroup -s /bin/sh -D appuser
 
 # Copy package files and install dependencies
 COPY package*.json ./
@@ -19,10 +21,10 @@ COPY src/ ./src/
 
 # Create writable directories for the app
 RUN mkdir -p /tmp /app/.npm && \
-    chown -R node:node /app /tmp
+    chown -R appuser:appgroup /app /tmp
 
 # Switch to non-root user
-USER node
+USER appuser
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

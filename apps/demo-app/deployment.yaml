@@ -18,14 +18,15 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 30000
+        runAsGroup: 30000
+        fsGroup: 30000
         seccompProfile:
           type: RuntimeDefault
       containers:
       - name: demo-app
-        image: gitops-demo-app:v1.0.0
+        image: gitops-demo-app:v1.0.1
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
         env:
@@ -37,8 +38,8 @@ spec:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          runAsUser: 1000
-          runAsGroup: 1000
+          runAsUser: 30000
+          runAsGroup: 30000
           capabilities:
             drop:
             - ALL
