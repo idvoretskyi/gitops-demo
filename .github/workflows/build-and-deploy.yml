@@ -119,7 +119,7 @@ jobs:
     - name: Update image tag in deployment
       run: |
         NEW_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }}"
-        sed -i "s|image: gitops-demo-app:latest|image: ${NEW_TAG}|g" apps/demo-app/deployment.yaml
+        sed -i "s|image: gitops-demo-app:v1.0.0|image: ${NEW_TAG}|g" apps/demo-app/deployment.yaml
         
     - name: Commit and push changes
       env:

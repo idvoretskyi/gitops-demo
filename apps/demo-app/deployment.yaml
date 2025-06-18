@@ -15,9 +15,17 @@ spec:
       labels:
         app: demo-app
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: demo-app
-        image: gitops-demo-app:latest
+        image: gitops-demo-app:v1.0.0
         ports:
         - containerPort: 3000
         env:
@@ -25,6 +33,18 @@ spec:
           value: "production"
         - name: PORT
           value: "3000"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+            - NET_RAW
+          seccompProfile:
+            type: RuntimeDefault
         resources:
           requests:
             memory: "64Mi"
@@ -44,3 +64,13 @@ spec:
             port: 3000
           initialDelaySeconds: 5
           periodSeconds: 5
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: app-cache
+          mountPath: /app/.npm
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: app-cache
+        emptyDir: {}

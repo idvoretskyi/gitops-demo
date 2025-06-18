@@ -68,6 +68,21 @@ kubectl apply --dry-run=client -k apps/demo-app/
 - Gitleaks for secrets detection
 - npm audit for Node.js dependency vulnerabilities
 
+**Container Security**:
+- Non-root user execution (UID 1000)
+- Read-only root filesystem with writable volumes for /tmp and cache
+- Dropped ALL capabilities including NET_RAW
+- Security contexts with privilege escalation disabled
+- Runtime/default seccomp profile
+- Health checks built into Docker image
+
+**Kubernetes Security**:
+- SecurityContext with runAsNonRoot and specific UID/GID
+- No service account token mounting
+- NetworkPolicy for traffic isolation
+- Resource limits and requests defined
+- Specific image tags (no 'latest')
+
 **Infrastructure Security**:
 - Kubesec for Kubernetes manifest security analysis
 - Polaris for Kubernetes best practices validation
