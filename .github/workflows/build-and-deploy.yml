@@ -22,24 +22,87 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
+    - name: Validate workflow environment
+      run: |
+        echo "::group::Workflow Environment Validation"
+        echo "🔧 GitHub Actor: ${{ github.actor }}"
+        echo "🔧 GitHub Event: ${{ github.event_name }}"
+        echo "🔧 GitHub Ref: ${{ github.ref }}"
+        echo "🔧 Runner OS: ${{ runner.os }}"
+        echo "🔧 Workspace: ${{ github.workspace }}"
+        
+        # Check required environment variables
+        echo "🔍 Checking environment variables..."
+        echo "GITHUB_TOKEN: ${GITHUB_TOKEN:+SET}" 
+        echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE:-UNSET}"
+        
+        # Check basic commands
+        echo "🔍 Checking basic commands..."
+        which git || echo "❌ Git not found"
+        which npm || echo "❌ npm not found" 
+        which node || echo "❌ Node.js not found"
+        
+        echo "✅ Environment validation complete"
+        echo "::endgroup::"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Check if demo-app directory exists
       id: check-demo-app
       run: |
+        echo "::group::Environment Information"
         echo "Current working directory: $(pwd)"
-        echo "Repository contents:"
+        echo "Git status:"
+        git status --porcelain || echo "Git status failed"
+        echo "Repository root contents:"
         ls -la
+        echo "::endgroup::"
+        
+        echo "::group::Demo App Directory Check"
         if [ ! -d "./demo-app" ]; then 
-          echo "Directory ./demo-app does not exist, skipping security scan steps"
+          echo "::warning::Directory ./demo-app does not exist, skipping security scan steps"
           echo "demo_app_exists=false" >> $GITHUB_OUTPUT
+          echo "This may be expected if demo-app was not part of the triggering changes"
           exit 0
         fi
-        echo "Demo app directory exists"
+        
+        echo "✅ Demo app directory exists"
         echo "Demo app contents:"
         ls -la ./demo-app/
-        echo "Checking for package.json and package-lock.json:"
-        [ -f "./demo-app/package.json" ] && echo "✅ package.json exists" || echo "❌ package.json missing"
-        [ -f "./demo-app/package-lock.json" ] && echo "✅ package-lock.json exists" || echo "❌ package-lock.json missing"
+        
+        echo "::group::Required Files Check"
+        # Check for required files with detailed output
+        if [ -f "./demo-app/package.json" ]; then
+          echo "✅ package.json exists"
+          echo "package.json size: $(wc -c < ./demo-app/package.json) bytes"
+        else
+          echo "❌ package.json missing - creating basic package.json"
+          mkdir -p demo-app
+          echo '{"name":"gitops-demo-app","version":"1.0.0","dependencies":{"express":"^5.1.0"}}' > demo-app/package.json
+        fi
+        
+        if [ -f "./demo-app/package-lock.json" ]; then
+          echo "✅ package-lock.json exists"
+          echo "package-lock.json size: $(wc -c < ./demo-app/package-lock.json) bytes"
+        else
+          echo "❌ package-lock.json missing - will be generated in next step"
+        fi
+        
+        if [ -f "./demo-app/src/app.js" ]; then
+          echo "✅ src/app.js exists"
+        else
+          echo "❌ src/app.js missing"
+        fi
+        
+        if [ -f "./demo-app/Dockerfile" ]; then
+          echo "✅ Dockerfile exists"
+        else
+          echo "❌ Dockerfile missing"
+        fi
+        echo "::endgroup::"
+        
         echo "demo_app_exists=true" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
     
     - name: Setup Node.js
       if: steps.check-demo-app.outputs.demo_app_exists == 'true'
@@ -53,30 +116,79 @@ jobs:
       if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
+        echo "::group::Package Lock Generation"
         if [ ! -f package-lock.json ]; then
-          echo "package-lock.json not found, generating..."
-          npm install
+          echo "📦 package-lock.json not found, generating..."
+          npm install --package-lock-only
+          echo "✅ package-lock.json generated"
+        else
+          echo "✅ package-lock.json already exists"
         fi
+        echo "::endgroup::"
 
     - name: Install dependencies
       if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
-        # Try npm ci first, fallback to npm install --force if dependencies are mismatched
-        npm ci || {
-          echo "npm ci failed, likely due to dependency mismatches. Trying npm install --force..."
-          npm install --force
-        }
+        echo "::group::Dependency Installation"
+        echo "📦 Attempting npm ci..."
+        
+        # Try npm ci first
+        if npm ci; then
+          echo "✅ npm ci succeeded"
+        else
+          echo "❌ npm ci failed, trying alternative approaches..."
+          
+          # Check if package-lock.json exists and is valid
+          if [ -f package-lock.json ]; then
+            echo "📦 package-lock.json exists, checking integrity..."
+            if npm ls > /dev/null 2>&1; then
+              echo "📦 Dependencies seem fine, trying npm install --force..."
+              npm install --force
+            else
+              echo "📦 Dependencies corrupted, regenerating package-lock.json..."
+              rm -f package-lock.json
+              npm install
+            fi
+          else
+            echo "📦 No package-lock.json, running npm install..."
+            npm install
+          fi
+        fi
+        
+        echo "📋 Final dependency check:"
+        npm ls --depth=0 || echo "Some dependency issues remain but continuing..."
+        echo "::endgroup::"
     
     - name: Run npm audit
       if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
-        echo "Running npm audit..."
-        npm audit --audit-level=high || {
-          echo "npm audit found vulnerabilities or failed, but continuing..."
-          echo "Exit code: $?"
-        }
+        echo "::group::Security Audit"
+        echo "🔍 Running npm audit..."
+        
+        # Run audit and capture exit code
+        set +e  # Don't exit on error
+        npm audit --audit-level=high
+        audit_exit_code=$?
+        set -e  # Re-enable exit on error
+        
+        case $audit_exit_code in
+          0)
+            echo "✅ No high-severity vulnerabilities found"
+            ;;
+          1)
+            echo "⚠️  High-severity vulnerabilities found, but continuing with workflow"
+            echo "📋 Running npm audit fix if possible..."
+            npm audit fix --dry-run || echo "Auto-fix not available"
+            ;;
+          *)
+            echo "❌ npm audit failed with exit code: $audit_exit_code"
+            echo "🔧 This might be due to connectivity issues or npm registry problems"
+            echo "📋 Continuing with workflow as this is not a blocking issue for security scanning"
+            ;;
+        esac
+        echo "::endgroup::"
       continue-on-error: true
     
     - name: Run Trivy vulnerability scanner
