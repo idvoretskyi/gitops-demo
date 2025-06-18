@@ -60,9 +60,29 @@ kubectl apply --dry-run=client -k apps/demo-app/
 - **GitOps Tool**: Flux CD
 - **Orchestration**: Kubernetes with Kustomize
 
+## Security Features
+
+**Code Scanning**:
+- CodeQL analysis for JavaScript security vulnerabilities
+- Trivy vulnerability scanning for dependencies and Docker images
+- Gitleaks for secrets detection
+- npm audit for Node.js dependency vulnerabilities
+
+**Infrastructure Security**:
+- Kubesec for Kubernetes manifest security analysis
+- Polaris for Kubernetes best practices validation
+- Checkov for Infrastructure as Code security scanning
+
+**Automated Security Updates**:
+- Dependabot for dependency updates (npm, Docker, GitHub Actions)
+- Weekly scheduled security scans
+
 ## Key Files
 
 - `demo-app/src/app.js` - Main application entry point
 - `apps/demo-app/deployment.yaml` - Kubernetes deployment manifest
 - `flux-system/gotk-components.yaml` - Flux system configuration
-- `.github/workflows/build-and-deploy.yml` - CI/CD pipeline
+- `.github/workflows/build-and-deploy.yml` - CI/CD pipeline with security scanning
+- `.github/workflows/codeql.yml` - CodeQL security analysis
+- `.github/workflows/security.yml` - Comprehensive security scanning
+- `.github/dependabot.yml` - Automated dependency updates

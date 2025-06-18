@@ -1,0 +1,80 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * 1'  # Weekly on Mondays at 3 AM UTC
+
+jobs:
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  kubernetes-security:
+    name: Kubernetes Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Run Kubesec scan
+      run: |
+        curl -sSX POST --data-binary @apps/demo-app/deployment.yaml \
+          https://v2.kubesec.io/scan | jq .
+    
+    - name: Run Polaris for Kubernetes best practices
+      uses: fairwindsops/polaris/.github/actions/setup-polaris@master
+      with:
+        version: 5.0.0
+    
+    - name: Validate Kubernetes manifests with Polaris
+      run: |
+        polaris audit --audit-path apps/ --format json > polaris-results.json
+        cat polaris-results.json
+
+  infrastructure-scan:
+    name: Infrastructure as Code Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Run Checkov for IaC security
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: .
+        framework: kubernetes,dockerfile
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+    
+    - name: Upload Checkov scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: checkov-results.sarif
