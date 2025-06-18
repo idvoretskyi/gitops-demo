@@ -26,7 +26,7 @@ spec:
       containers:
       - name: demo-app
         # Production: Use image digest for immutable deployments
-        image: ghcr.io/idvoretskyi/gitops-demo/demo-app@sha256:de9f52436a01f88fbda38fe092d48589d89f26517001b8ceb06a6f08140f61ef
+        image: ghcr.io/idvoretskyi/gitops-demo/demo-app@sha256:a5c9725df7e7e4f48ff1a9079bbf990f52dd219fe95d39e9a128e0d6c5e5aeb8
         imagePullPolicy: Always
         ports:
         - containerPort: 3000

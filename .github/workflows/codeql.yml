@@ -33,6 +33,13 @@ jobs:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: demo-app/package-lock.json
+    
     - name: Autobuild
       uses: github/codeql-action/autobuild@v3
 

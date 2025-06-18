@@ -14,7 +14,7 @@ This repository demonstrates GitOps principles using Flux CD with a simple Node.
 
 ## Demo Application
 
-A simple Node.js Express application that provides:
+A simple Node.js 24 Express application that provides:
 - Health check endpoint at `/health`
 - Basic API response at `/`
 

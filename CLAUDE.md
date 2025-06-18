@@ -54,7 +54,7 @@ kubectl apply --dry-run=client -k apps/demo-app/
 4. Flux detects manifest changes and deploys to cluster
 
 **Application Stack**:
-- **Runtime**: Node.js 18 Alpine
+- **Runtime**: Node.js 24 Alpine
 - **Framework**: Express.js
 - **Container Registry**: GitHub Container Registry (GHCR)
 - **GitOps Tool**: Flux CD

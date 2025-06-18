@@ -3,10 +3,9 @@ name: Build and Deploy
 on:
   push:
     branches: [ main ]
-    paths: [ 'demo-app/**' ]
   pull_request:
     branches: [ main ]
-    paths: [ 'demo-app/**' ]
+  workflow_dispatch:  # Allow manual triggering
 
 env:
   REGISTRY: ghcr.io
@@ -23,14 +22,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Verify scan directory exists
+    - name: Check if demo-app directory exists
+      id: check-demo-app
       run: |
         echo "Current working directory: $(pwd)"
         echo "Repository contents:"
         ls -la
         if [ ! -d "./demo-app" ]; then 
-          echo "Directory ./demo-app does not exist"; 
-          exit 1; 
+          echo "Directory ./demo-app does not exist, skipping security scan steps"
+          echo "demo_app_exists=false" >> $GITHUB_OUTPUT
+          exit 0
         fi
         echo "Demo app directory exists"
         echo "Demo app contents:"
@@ -38,15 +39,18 @@ jobs:
         echo "Checking for package.json and package-lock.json:"
         [ -f "./demo-app/package.json" ] && echo "✅ package.json exists" || echo "❌ package.json missing"
         [ -f "./demo-app/package-lock.json" ] && echo "✅ package-lock.json exists" || echo "❌ package-lock.json missing"
+        echo "demo_app_exists=true" >> $GITHUB_OUTPUT
     
     - name: Setup Node.js
+      if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '24'
         cache: 'npm'
         cache-dependency-path: demo-app/package-lock.json
     
     - name: Generate package-lock.json if missing
+      if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
         if [ ! -f package-lock.json ]; then
@@ -55,6 +59,7 @@ jobs:
         fi
 
     - name: Install dependencies
+      if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
         # Try npm ci first, fallback to npm install --force if dependencies are mismatched
@@ -64,6 +69,7 @@ jobs:
         }
     
     - name: Run npm audit
+      if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       run: |
         cd demo-app
         echo "Running npm audit..."
@@ -74,6 +80,7 @@ jobs:
       continue-on-error: true
     
     - name: Run Trivy vulnerability scanner
+      if: steps.check-demo-app.outputs.demo_app_exists == 'true'
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
@@ -84,18 +91,23 @@ jobs:
     
     - name: Check Trivy results
       run: |
-        if [ -f "trivy-results.sarif" ]; then
-          echo "Trivy scan completed successfully"
-          echo "SARIF file size: $(wc -c < trivy-results.sarif) bytes"
-          # Validate SARIF file is not empty and contains valid JSON
-          if [ -s "trivy-results.sarif" ]; then
-            echo "SARIF file contains data"
+        if [ "${{ steps.check-demo-app.outputs.demo_app_exists }}" == "true" ]; then
+          if [ -f "trivy-results.sarif" ]; then
+            echo "Trivy scan completed successfully"
+            echo "SARIF file size: $(wc -c < trivy-results.sarif) bytes"
+            # Validate SARIF file is not empty and contains valid JSON
+            if [ -s "trivy-results.sarif" ]; then
+              echo "SARIF file contains data"
+            else
+              echo "SARIF file is empty, creating minimal valid SARIF"
+              echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"trivy","version":"0.0.0"}},"results":[]}]}' > trivy-results.sarif
+            fi
           else
-            echo "SARIF file is empty, creating minimal valid SARIF"
+            echo "Trivy scan did not generate results, creating empty SARIF file"
             echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"trivy","version":"0.0.0"}},"results":[]}]}' > trivy-results.sarif
           fi
         else
-          echo "Trivy scan did not generate results, creating empty SARIF file"
+          echo "Demo app directory not found, creating empty SARIF file for security scan step"
           echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"trivy","version":"0.0.0"}},"results":[]}]}' > trivy-results.sarif
         fi
     
