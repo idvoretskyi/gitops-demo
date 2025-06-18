@@ -118,11 +118,19 @@ jobs:
 
     - name: Update image with digest in deployment
       run: |
-        # Get the image digest from the built image
-        IMAGE_DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }} --format='{{index .RepoDigests 0}}' 2>/dev/null || echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }} --format='{{.Id}}' | cut -d: -f2)")
+        # Get the image digest from the built and pushed image
+        IMAGE_DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }} --format='{{index .RepoDigests 0}}' 2>/dev/null)
+        
+        if [ -z "$IMAGE_DIGEST" ]; then
+          # If no repo digest available, use the image ID as digest
+          IMAGE_ID=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }} --format='{{.Id}}' | cut -d: -f2)
+          IMAGE_DIGEST="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:${IMAGE_ID}"
+        fi
+        
+        echo "Updating deployment with image digest: ${IMAGE_DIGEST}"
         
         # Update deployment with image digest
-        sed -i "s|image: gitops-demo-app:.*|image: ${IMAGE_DIGEST}|g" apps/demo-app/deployment.yaml
+        sed -i "s|image: gitops-demo-app@sha256:.*|image: ${IMAGE_DIGEST}|g" apps/demo-app/deployment.yaml
         
     - name: Commit and push changes
       env:

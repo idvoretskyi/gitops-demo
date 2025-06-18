@@ -10,7 +10,7 @@ This document outlines the comprehensive security measures implemented in the Gi
 |-------|--------|----------------|
 | **CKV_K8S_15**: Image Pull Policy Always | ✅ | `imagePullPolicy: Always` |
 | **CKV_K8S_40**: High UID Container | ✅ | `runAsUser: 30000` |
-| **CKV_K8S_43**: Image Digest | ✅ | CI/CD uses digests in production |
+| **CKV_K8S_43**: Image Digest | ✅ | `gitops-demo-app@sha256:de9f5243...` |
 | **CKV_K8S_8**: Read-only Filesystem | ✅ | `readOnlyRootFilesystem: true` with volumes |
 | **CKV_K8S_37**: Drop ALL Capabilities | ✅ | `capabilities.drop: [ALL, NET_RAW]` |
 | **CKV_K8S_23**: Non-root User | ✅ | `runAsNonRoot: true` |
